@@ -22,9 +22,9 @@ class SAM3DFlowMatchingTrainer(SparseFlowMatchingTrainer):
     Trainer aligned with the current stage-1 setting.
 
     调整点：
-      - shape 直接使用原始 latent，不要求标准化
+      - shape 直接使用原始 latent，不做标准化
       - scale 由 dataset 侧先做 torch.log
-      - translation_scale 保留兼容，但默认不参与 loss 权重
+      - translation_scale 保留并参与 loss（按当前项目设定）
     """
 
     def training_losses(self, **batch) -> Tuple[Dict, Dict]:
@@ -58,8 +58,8 @@ class SAM3DFlowMatchingTrainer(SparseFlowMatchingTrainer):
                 x0_dict[key] = batch[key]
 
         ref_tensor = x0_dict["shape"]
-        B = ref_tensor.shape[0]
-        t = self.sample_t(B).to(ref_tensor.device).float()
+        bsz = ref_tensor.shape[0]
+        t = self.sample_t(bsz).to(ref_tensor.device).float()
 
         xt_dict = {}
         target_dict = {}
@@ -67,7 +67,7 @@ class SAM3DFlowMatchingTrainer(SparseFlowMatchingTrainer):
 
         for k, v in x0_dict.items():
             noise = torch.randn_like(v)
-            t_expand = t.view(B, *([1] * (v.ndim - 1)))
+            t_expand = t.view(bsz, *([1] * (v.ndim - 1)))
             xt_dict[k] = (1 - (1 - sigma_min) * t_expand) * v + t_expand * noise
             target_dict[k] = noise - (1 - sigma_min) * v
 
@@ -87,7 +87,7 @@ class SAM3DFlowMatchingTrainer(SparseFlowMatchingTrainer):
         terms = edict()
         total_loss = 0.0
 
-        # stage-1 当前损失权重：translation_scale 不参与，scale 保留并依赖 log-space
+        # 当前项目版 stage-1 损失权重
         weights = {
             "shape": 1.0,
             "6drotation_normalized": 0.1,

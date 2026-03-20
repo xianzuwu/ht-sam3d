@@ -13,8 +13,8 @@ class SAM3DDistillDataset(Dataset):
     按当前一阶段 ss 训练逻辑整理的数据集：
       - shape latent 不做标准化
       - scale 使用 torch.log
-      - translation_scale 保留返回以兼容现有模型映射，但不做标准化
-        （trainer 中默认不再给它 loss weight）
+      - translation_scale 保留返回并使用 torch.log
+        （按当前项目设定，trainer 中参与 loss）
     """
 
     def __init__(self, token_dir, image_dir, image_size=518):
@@ -35,8 +35,6 @@ class SAM3DDistillDataset(Dataset):
         self.value_range = (0.0, 1.0)
 
         print(f"[Dataset] Found {len(self.token_files)} GT token files.")
-
-        # 这里只保留可选统计信息打印，不再参与 shape / translation_scale 的标准化
         self.stats = self._compute_stats()
 
     @staticmethod
@@ -45,6 +43,13 @@ class SAM3DDistillDataset(Dataset):
 
     def __len__(self):
         return len(self.token_files)
+
+    @staticmethod
+    def _maybe_squeeze_batch_dim(x: torch.Tensor) -> torch.Tensor:
+        x = x.float()
+        if x.ndim > 0 and x.shape[0] == 1:
+            x = x.squeeze(0)
+        return x
 
     def _compute_stats(self):
         print(f"\n[Dataset] Scanning {len(self.token_files)} files to compute stats...")
@@ -59,12 +64,17 @@ class SAM3DDistillDataset(Dataset):
 
                 if "shape" in gt_data:
                     shape_accum.append(gt_data["shape"].float().flatten())
+
                 if "scale" in gt_data:
                     scale = torch.clamp(gt_data["scale"].float().flatten(), min=1e-6)
                     scale_log_accum.append(torch.log(scale))
+
                 if "translation_scale" in gt_data:
-                    ts = torch.clamp(gt_data["translation_scale"].float().flatten(), min=1e-6)
+                    ts = torch.clamp(
+                        gt_data["translation_scale"].float().flatten(), min=1e-6
+                    )
                     trans_scale_log_accum.append(torch.log(ts))
+
             except Exception as e:
                 print(f"[Dataset] Failed loading stats from {token_path}: {e}")
 
@@ -73,10 +83,12 @@ class SAM3DDistillDataset(Dataset):
             all_shapes = torch.cat(shape_accum, dim=0)
             stats["shape_mean"] = all_shapes.mean().item()
             stats["shape_std"] = max(all_shapes.std().item(), 1e-6)
+
         if len(scale_log_accum) > 0:
             all_scale_log = torch.cat(scale_log_accum, dim=0)
             stats["scale_log_mean"] = all_scale_log.mean().item()
             stats["scale_log_std"] = max(all_scale_log.std().item(), 1e-6)
+
         if len(trans_scale_log_accum) > 0:
             all_ts_log = torch.cat(trans_scale_log_accum, dim=0)
             stats["ts_log_mean"] = all_ts_log.mean().item()
@@ -106,25 +118,27 @@ class SAM3DDistillDataset(Dataset):
 
         rmin, rmax = np.where(rows)[0][[0, -1]]
         cmin, cmax = np.where(cols)[0][[0, -1]]
-        return cmin, rmin, cmax, rmax
+
+        # PIL crop 右下边界是开区间，所以这里 +1
+        return cmin, rmin, cmax + 1, rmax + 1
 
     def preprocess_image_tensor(self, pil_image):
         arr = np.array(pil_image)
 
         if arr.shape[-1] == 3:
-            alpha = np.ones_like(arr[..., 0]) * 255
+            alpha = np.ones_like(arr[..., 0], dtype=np.uint8) * 255
             arr = np.dstack([arr, alpha])
 
         x = torch.from_numpy(arr).permute(2, 0, 1).float() / 255.0
         img = x[:3, ...]
         mask = x[3:4, ...]
 
-        _, H, W = img.shape
-        if H != W:
-            diff = abs(H - W)
+        _, h, w = img.shape
+        if h != w:
+            diff = abs(h - w)
             p1 = diff // 2
             p2 = diff - p1
-            padding = (p1, p2, 0, 0) if H > W else (0, 0, p1, p2)
+            padding = (p1, p2, 0, 0) if h > w else (0, 0, p1, p2)
             img = F.pad(img, padding, value=1.0)
             mask = F.pad(mask, padding, value=0.0)
 
@@ -186,18 +200,18 @@ class SAM3DDistillDataset(Dataset):
                 f"Available keys: {list(gt_data.keys())}"
             )
 
-        # shape latent：一阶段 ss 不做标准化
-        shape_raw = gt_data["shape"].float().squeeze(0)
+        # shape：一阶段 ss 不做标准化
+        shape_raw = self._maybe_squeeze_batch_dim(gt_data["shape"])
 
-        rot_token = gt_data["6drotation_normalized"].float().squeeze(0)
-        trans_token = gt_data["translation"].float().squeeze(0)
+        rot_token = self._maybe_squeeze_batch_dim(gt_data["6drotation_normalized"])
+        trans_token = self._maybe_squeeze_batch_dim(gt_data["translation"])
 
-        # 学长指出 scale 需要过 torch.log
-        scale_raw = gt_data["scale"].float().squeeze(0)
+        # scale：使用 log-space
+        scale_raw = self._maybe_squeeze_batch_dim(gt_data["scale"])
         scale_token = torch.log(torch.clamp(scale_raw, min=1e-6))
 
-        # 保留 translation_scale 仅为兼容现有 latent 映射；不做标准化
-        t_scale_raw = gt_data["translation_scale"].float().squeeze(0)
+        # translation_scale：保留并参与 loss，也使用 log-space
+        t_scale_raw = self._maybe_squeeze_batch_dim(gt_data["translation_scale"])
         t_scale_token = torch.log(torch.clamp(t_scale_raw, min=1e-6))
 
         img_path = self._find_image_path(token_path)

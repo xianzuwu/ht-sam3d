@@ -46,11 +46,11 @@ from trellis.datasets.sam3d_distill_dataset import SAM3DDistillDataset
 
 
 class TeeLogger:
-    def __init__(self, filepath):
+    def __init__(self, filepath: str):
         self.file = open(filepath, "a", encoding="utf-8")
         self.stdout = sys.stdout
 
-    def write(self, message):
+    def write(self, message: str):
         self.stdout.write(message)
         self.file.write(message)
 
@@ -268,7 +268,6 @@ def main():
         optimizer = trainer.optimizer
         lr_scheduler = getattr(trainer, "lr_scheduler", None)
 
-        # bf16/H100 分支不需要 GradScaler；fp16 分支使用新接口
         scaler = None
         if not is_h100:
             scaler = torch.amp.GradScaler("cuda", enabled=True)
@@ -289,11 +288,11 @@ def main():
                 for k, v in batch.items()
             }
 
+            optimizer.zero_grad(set_to_none=True)
+
             with torch.amp.autocast("cuda", enabled=True, dtype=autocast_dtype):
                 losses, _ = trainer.training_losses(**batch)
                 loss = losses["loss"]
-
-            optimizer.zero_grad(set_to_none=True)
 
             if is_h100:
                 loss.backward()
