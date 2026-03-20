@@ -402,41 +402,23 @@ outputs/sam3d_ss_flow_experiment/ckpts/
 
 
 # =========================
-# Project-specific ignores (FINAL)
+# outputs 精细控制
 # =========================
 
-# ===== Training outputs =====
-outputs/
-outputs/sam3d_ss_flow_experiment/
-outputs/sam3d_ss_flow_experiment/ckpts/
-**/tb_logs/
-**/samples/
+# ignore heavy artifacts only
+outputs/**/ckpts/
+outputs/**/tb_logs/
+outputs/ckpts/
+outputs/tb_logs/
 
-# ===== Notebook / local data =====
-notebook/gt_tokens/
-notebook/images/
-notebook/meshes/
-
-# ===== Large demo assets (BIGGEST SIZE CUT) =====
-assets/example_image/
-assets/example_multi_image/
-assets/teaser.png
-assets/T.ply
-assets/logo.webp
-
-# ===== ML / 3D artifacts =====
+# model files
 *.pt
 *.pth
 *.ckpt
-*.bin
-*.npy
-*.npz
-*.glb
-*.usd
-*.usda
-*.usdc
-*.ply
-*.obj
 
-# ===== Logs =====
-*.log
+# tensorboard
+events.out.tfevents*
+
+# ===== cache =====
+__pycache__/
+*.pyc

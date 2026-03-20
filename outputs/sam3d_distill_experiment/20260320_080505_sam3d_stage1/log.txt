@@ -1,0 +1,48 @@
+================================================================================
+Run directory: outputs/sam3d_distill_experiment/20260320_080505_sam3d_stage1
+Log file: outputs/sam3d_distill_experiment/20260320_080505_sam3d_stage1/log.txt
+Resolved config: outputs/sam3d_distill_experiment/20260320_080505_sam3d_stage1/config_resolved.json
+================================================================================
+>>> Final model config: {'in_channels': 8, 'model_channels': 1024, 'out_channels': 8, 'num_blocks': 24, 'num_heads': 16, 'mlp_ratio': 4, 'patch_size': 1, 'resolution': 16, 'dino_model': 'dinov2_vitl14', 'use_fp16': False, 'use_bf16': True, 'use_checkpoint': True}
+>>> Final dataset config: {'token_dir': '/data/L202500204/Projects/trellis-sam-3d-objects/notebook/gt_tokens', 'image_dir': '/data/L202500204/Projects/trellis-sam-3d-objects/notebook/images', 'image_size': 518}
+>>> Final trainer config: {'optimizer': {'name': 'AdamW', 'args': {'lr': 0.0001, 'weight_decay': 0.05, 'betas': [0.9, 0.95]}}, 'lr_scheduler': {'name': 'LinearWarmupLRScheduler', 'args': {'warmup_steps': 100}}, 'max_steps': 10000, 'i_save': 1000, 'i_sample': 1000, 'i_log': 10, 'batch_size': 2}
+>>> Initializing SAM3D Adapter Model...
+>>> Building dataset...
+[Dataset] Found 27 GT token files.
+
+[Dataset] Scanning 27 files to compute stats...
+Compute dataset stats:   0%|          | 0/27 [00:00<?, ?it/s]Compute dataset stats:  78%|#######7  | 21/27 [00:00<00:00, 204.10it/s]Compute dataset stats: 100%|##########| 27/27 [00:00<00:00, 213.38it/s]
+[Dataset] Stats ready (for inspection only):
+  shape_mean: -0.014928
+  shape_std: 0.976077
+  scale_log_mean: 0.639925
+  scale_log_std: 0.095156
+  ts_log_mean: -2.327816
+  ts_log_std: 0.355652
+
+>>> Initializing trainer...
+
+
+Trainer initialized.
+SAM3DFlowMatchingTrainer
+  - Models:
+    - denoiser: SAM3DStructureFlowAdapter
+  - Dataset: <trellis.datasets.sam3d_distill_dataset.SAM3DDistillDataset object at 0x7f647005b5b0>
+  - Dataloader:
+    - Sampler: BalancedResumableSampler
+    - Num workers: 16
+  - Number of steps: 10000
+  - Number of GPUs: 1
+  - Batch size: 2
+  - Batch size per GPU: 2
+  - Batch split: 1
+  - Optimizer: AdamW
+  - Learning rate: 1.0000000000000002e-06
+  - LR scheduler: LinearWarmupLRScheduler
+  - EMA rate: [0.9999]
+  - FP16 mode: inflat_all
+>>> Starting Distillation Training...
+{"time": {"step": 0.7103002071380615, "elapsed": 35.093629360198975}, "loss": {"mse_shape": 4.442841529846191, "mse_6drotation_normalized": 1.808275580406189, "mse_translation": 1.807446002960205, "mse_scale": 1.1775339841842651, "mse_translation_scale": 23.677963256835938, "loss": 6.548868656158447}, "status": {}, "lr": 1.1000000000000001e-05, "step": 10}
+{"time": {"step": 0.6126582622528076, "elapsed": 43.88303589820862}, "loss": {"mse_shape": 4.4577531814575195, "mse_6drotation_normalized": 1.8928885459899902, "mse_translation": 1.4223706722259521, "mse_scale": 1.5631307363510132, "mse_translation_scale": 7.781231880187988, "loss": 6.225726127624512}, "status": {}, "lr": 2.1e-05, "step": 20}
+{"time": {"step": 0.6018240451812744, "elapsed": 50.29770016670227}, "loss": {"mse_shape": 4.463949680328369, "mse_6drotation_normalized": 1.2008016109466553, "mse_translation": 3.3294267654418945, "mse_scale": 1.608418345451355, "mse_translation_scale": 11.619232177734375, "loss": 8.074297904968262}, "status": {}, "lr": 3.1e-05, "step": 30}
+{"time": {"step": 0.6118655204772949, "elapsed": 56.89378499984741}, "loss": {"mse_shape": 4.4708099365234375, "mse_6drotation_normalized": 1.0787343978881836, "mse_translation": 2.551830291748047, "mse_scale": 4.076265811920166, "mse_translation_scale": 11.833696365356445, "loss": 7.538140296936035}, "status": {}, "lr": 4.1e-05, "step": 40}

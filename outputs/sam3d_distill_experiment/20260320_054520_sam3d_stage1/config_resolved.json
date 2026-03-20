@@ -1,0 +1,46 @@
+{
+  "exp_name": "sam3d_stage1",
+  "model_cfg": {
+    "in_channels": 8,
+    "model_channels": 1024,
+    "out_channels": 8,
+    "num_blocks": 24,
+    "num_heads": 16,
+    "mlp_ratio": 4,
+    "patch_size": 1,
+    "resolution": 16,
+    "dino_model": "dinov2_vitl14",
+    "use_fp16": false,
+    "use_bf16": true,
+    "use_checkpoint": true
+  },
+  "dataset_cfg": {
+    "token_dir": "/data/L202500204/Projects/trellis-sam-3d-objects/notebook/gt_tokens",
+    "image_dir": "/data/L202500204/Projects/trellis-sam-3d-objects/notebook/images",
+    "image_size": 518
+  },
+  "trainer_cfg": {
+    "optimizer": {
+      "name": "AdamW",
+      "args": {
+        "lr": 0.0001,
+        "weight_decay": 0.05,
+        "betas": [
+          0.9,
+          0.95
+        ]
+      }
+    },
+    "lr_scheduler": {
+      "name": "LinearWarmupLRScheduler",
+      "args": {
+        "warmup_steps": 100
+      }
+    },
+    "max_steps": 10000,
+    "i_save": 1000,
+    "i_sample": 1000,
+    "i_log": 10,
+    "batch_size": 2
+  }
+}
